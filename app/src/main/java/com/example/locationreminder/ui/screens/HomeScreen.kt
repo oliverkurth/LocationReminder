@@ -1,0 +1,87 @@
+package com.example.locationreminder.ui.screens
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.locationreminder.data.ReminderEntity
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    onNavigateToAddReminder: () -> Unit,
+    onNavigateToEditReminder: (Long) -> Unit,
+    onNavigateToLocations: () -> Unit,
+    viewModel: ReminderViewModel = viewModel(factory = ReminderViewModelFactory(LocalContext.current.applicationContext))
+) {
+    val reminders by viewModel.allReminders.collectAsState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Reminders") },
+                actions = {
+                    IconButton(onClick = onNavigateToLocations) {
+                        Icon(Icons.Default.Place, contentDescription = "Locations")
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onNavigateToAddReminder) {
+                Icon(Icons.Default.Add, contentDescription = "Add Reminder")
+            }
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            items(reminders) { reminder ->
+                ReminderItem(
+                    reminder = reminder,
+                    onClick = { onNavigateToEditReminder(reminder.id) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ReminderItem(reminder: ReminderEntity, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = reminder.title, style = MaterialTheme.typography.titleMedium)
+            if (reminder.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = reminder.description, style = MaterialTheme.typography.bodyMedium)
+            }
+            if (reminder.timeOfDay != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = "Time: ${reminder.timeOfDay}", style = MaterialTheme.typography.bodySmall)
+            }
+            if (reminder.isDeferred) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = "Deferred", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
