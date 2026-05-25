@@ -49,6 +49,8 @@ class LocationViewModel(private val repository: AppRepository) : ViewModel() {
     private val _locationName = MutableStateFlow("")
     val locationName: StateFlow<String> = _locationName.asStateFlow()
 
+    var hasInitializedCenter = false
+
     fun loadLocation(id: Long) {
         if (id != -1L) {
             viewModelScope.launch {
@@ -82,6 +84,11 @@ class LocationViewModel(private val repository: AppRepository) : ViewModel() {
         locationOverlay?.myLocation?.let { point ->
             mapView.controller.animateTo(point)
             _mapCenter.value = point
+            hasInitializedCenter = true
+        } ?: run {
+            // Fallback if myLocation isn't available yet
+            mapView.controller.animateTo(_mapCenter.value)
+            hasInitializedCenter = true
         }
     }
 
@@ -178,7 +185,7 @@ fun MapScreen(
 
             Text(
                 text = "Radius: ${radius.toInt()}m",
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             Slider(
                 value = radius,
@@ -186,11 +193,15 @@ fun MapScreen(
                 valueRange = 50f..1000f,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
             )
 
-            Box(modifier = Modifier.weight(1f)) {
-                AndroidView(
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                // We use a key based on the locationId so the AndroidView is recreated if we switch locations,
+                // but it won't be recreated just because we pan.
+                key(locationId) {
+                    AndroidView(
+                    modifier = Modifier.fillMaxSize(),
                     factory = { ctx ->
                         MapView(ctx).apply {
                             mapViewRef = this
@@ -203,6 +214,7 @@ fun MapScreen(
                                 android.view.ViewGroup.LayoutParams.MATCH_PARENT,
                                 android.view.ViewGroup.LayoutParams.MATCH_PARENT
                             )
+                            setClipToOutline(true)
                             
                             val mapEventsReceiver = object : MapEventsReceiver {
                                 override fun singleTapConfirmedHelper(p: GeoPoint): Boolean {
@@ -219,30 +231,39 @@ fun MapScreen(
                         }
                     },
                     update = { mapView ->
-                        mapView.controller.setCenter(mapCenter)
+                        // Only set center if it's the first load (map is at 0,0) or if we are editing an existing location
+                        // and the map center hasn't been initialized to that location yet.
+                        if (mapView.mapCenter.latitude == 0.0 && mapView.mapCenter.longitude == 0.0) {
+                            mapView.controller.setCenter(mapCenter)
+                        } else if (locationId != -1L && !viewModel.hasInitializedCenter) {
+                            mapView.controller.setCenter(mapCenter)
+                            viewModel.hasInitializedCenter = true
+                        }
                         
                         // Clear previous markers/polygons except the events overlay and location overlay
-                        mapView.overlays.removeAll { it !is MapEventsOverlay && it !is MyLocationNewOverlay }
+                        val overlaysToRemove = mapView.overlays.filter { it !is MapEventsOverlay && it !is MyLocationNewOverlay }
+                        mapView.overlays.removeAll(overlaysToRemove)
                         
                         selectedPoint?.let { point ->
+                            val circle = Polygon(mapView).apply {
+                                points = Polygon.pointsAsCircle(point, radius.toDouble())
+                                fillColor = 0x440000FF // Semi-transparent blue (increased opacity)
+                                outlinePaint.color = 0xFF0000FF.toInt() // Solid blue border
+                                outlinePaint.strokeWidth = 5f // Thicker border
+                            }
+                            mapView.overlays.add(circle)
+
                             val marker = Marker(mapView).apply {
                                 position = point
                                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                                 title = "Selected Location"
                             }
                             mapView.overlays.add(marker)
-
-                            val circle = Polygon().apply {
-                                points = Polygon.pointsAsCircle(point, radius.toDouble())
-                                fillColor = 0x12121212
-                                strokeColor = 0xFF121212.toInt()
-                                strokeWidth = 2f
-                            }
-                            mapView.overlays.add(circle)
                         }
                         mapView.invalidate()
                     }
                 )
+                }
             }
         }
     }
