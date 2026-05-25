@@ -129,6 +129,17 @@ class ReminderViewModel(
         }
     }
 
+    fun deleteLocation(location: LocationEntity) {
+        viewModelScope.launch {
+            // Remove the location reference from any reminders that use it
+            val remindersWithLocation = allReminders.value.filter { it.locationId == location.id }
+            remindersWithLocation.forEach { 
+                repository.updateReminder(it.copy(locationId = null))
+            }
+            repository.deleteLocation(location)
+        }
+    }
+
     private fun scheduleWorkManager(reminderId: Long, reminder: ReminderEntity) {
         workManager.cancelAllWorkByTag("reminder_$reminderId")
 

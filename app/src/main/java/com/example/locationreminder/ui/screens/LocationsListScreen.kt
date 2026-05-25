@@ -68,7 +68,7 @@ fun LocationItem(location: LocationEntity, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
             Text(text = location.name, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = "Radius: ${location.radius.toInt()}m", style = MaterialTheme.typography.bodyMedium)

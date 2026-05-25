@@ -11,6 +11,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.example.locationreminder.data.ReminderEntity
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditReminderScreen(
@@ -32,6 +38,34 @@ fun AddEditReminderScreen(
 
     var expandedLocationDropdown by remember { mutableStateOf(false) }
 
+    var reminderToDelete by remember { mutableStateOf<ReminderEntity?>(null) }
+
+    if (reminderToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { reminderToDelete = null },
+            title = { Text("Delete Reminder") },
+            text = { Text("Are you sure you want to delete '${reminderToDelete?.title}'?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        reminderToDelete?.let { 
+                            viewModel.deleteReminder(it) 
+                            onNavigateBack()
+                        }
+                        reminderToDelete = null
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { reminderToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -42,6 +76,11 @@ fun AddEditReminderScreen(
                     }
                 },
                 actions = {
+                    if (reminderId != -1L) {
+                        IconButton(onClick = { reminderToDelete = viewModel.currentReminder.value }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
                     IconButton(
                         onClick = { viewModel.saveReminder(onNavigateBack) },
                         enabled = title.isNotBlank()

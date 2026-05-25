@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -112,6 +113,19 @@ class LocationViewModel(private val repository: AppRepository) : ViewModel() {
             onSaved()
         }
     }
+
+    fun deleteLocation(location: LocationEntity) {
+        viewModelScope.launch {
+            // Remove the location reference from any reminders that use it
+            // We need to fetch the reminders directly from the DB here since we don't have a StateFlow of them in this ViewModel
+            val allReminders = repository.getLocationBasedReminders() 
+            val remindersWithLocation = allReminders.filter { it.locationId == location.id }
+            remindersWithLocation.forEach { 
+                repository.updateReminder(it.copy(locationId = null))
+            }
+            repository.deleteLocation(location)
+        }
+    }
 }
 
 class LocationViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
@@ -137,6 +151,31 @@ fun MapScreen(
     val mapCenter by viewModel.mapCenter.collectAsState()
 
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Location") },
+            text = { Text("Are you sure you want to delete '${locationName}'? Reminders using this location will no longer trigger based on it.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.currentLocation.value?.let { viewModel.deleteLocation(it) }
+                        showDeleteDialog = false
+                        onNavigateBack()
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     LaunchedEffect(locationId) {
         Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
@@ -154,6 +193,11 @@ fun MapScreen(
                     }
                 },
                 actions = {
+                    if (locationId != -1L) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
                     IconButton(
                         onClick = { mapViewRef?.let { viewModel.centerOnCurrentLocation(it) } }
                     ) {
