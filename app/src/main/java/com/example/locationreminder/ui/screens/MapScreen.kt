@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -76,6 +77,14 @@ class LocationViewModel(private val repository: AppRepository) : ViewModel() {
         _locationName.value = name
     }
 
+    fun centerOnCurrentLocation(mapView: MapView) {
+        val locationOverlay = mapView.overlays.filterIsInstance<MyLocationNewOverlay>().firstOrNull()
+        locationOverlay?.myLocation?.let { point ->
+            mapView.controller.animateTo(point)
+            _mapCenter.value = point
+        }
+    }
+
     fun saveLocation(onSaved: () -> Unit) {
         val point = _selectedPoint.value ?: return
         val name = _locationName.value.ifBlank { "Unnamed Location" }
@@ -120,6 +129,8 @@ fun MapScreen(
     val locationName by viewModel.locationName.collectAsState()
     val mapCenter by viewModel.mapCenter.collectAsState()
 
+    var mapViewRef by remember { mutableStateOf<MapView?>(null) }
+
     LaunchedEffect(locationId) {
         Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
         Configuration.getInstance().userAgentValue = context.packageName
@@ -136,6 +147,11 @@ fun MapScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = { mapViewRef?.let { viewModel.centerOnCurrentLocation(it) } }
+                    ) {
+                        Icon(Icons.Default.MyLocation, contentDescription = "My Location")
+                    }
                     IconButton(
                         onClick = { viewModel.saveLocation(onNavigateBack) },
                         enabled = selectedPoint != null && locationName.isNotBlank()
@@ -177,6 +193,7 @@ fun MapScreen(
                 AndroidView(
                     factory = { ctx ->
                         MapView(ctx).apply {
+                            mapViewRef = this
                             setMultiTouchControls(true)
                             setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
                             controller.setZoom(15.0)
