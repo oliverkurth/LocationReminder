@@ -16,7 +16,7 @@ interface ReminderDao {
     @Query("SELECT * FROM reminders WHERE id = :id")
     suspend fun getReminderById(id: Long): ReminderEntity?
 
-    @Query("SELECT * FROM reminders WHERE locationId IS NOT NULL")
+    @Query("SELECT * FROM reminders WHERE locationId IS NOT NULL AND isActive = 1")
     suspend fun getLocationBasedReminders(): List<ReminderEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

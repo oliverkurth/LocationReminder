@@ -64,12 +64,24 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val clickIntent = Intent(context, ReminderActionReceiver::class.java).apply {
+            action = ReminderActionReceiver.ACTION_CLICK
+            putExtra(ReminderActionReceiver.EXTRA_REMINDER_ID, reminder.id)
+        }
+        val clickPendingIntent = PendingIntent.getBroadcast(
+            context,
+            reminder.id.toInt() + 3000,
+            clickIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(reminder.title)
             .setContentText(reminder.description)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(pendingIntent)
+            .setContentIntent(clickPendingIntent)
+            .setDeleteIntent(dismissPendingIntent)
             .setAutoCancel(true)
             .addAction(android.R.drawable.ic_menu_recent_history, "Defer (10 min)", deferPendingIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPendingIntent)

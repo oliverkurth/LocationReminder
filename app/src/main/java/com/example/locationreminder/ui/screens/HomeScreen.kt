@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.text.style.TextDecoration
 import com.example.locationreminder.data.ReminderEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,7 +53,8 @@ fun HomeScreen(
             items(reminders) { reminder ->
                 ReminderItem(
                     reminder = reminder,
-                    onClick = { onNavigateToEditReminder(reminder.id) }
+                    onClick = { onNavigateToEditReminder(reminder.id) },
+                    onToggleActive = { viewModel.toggleReminderActive(reminder) }
                 )
             }
         }
@@ -60,7 +62,7 @@ fun HomeScreen(
 }
 
 @Composable
-fun ReminderItem(reminder: ReminderEntity, onClick: () -> Unit) {
+fun ReminderItem(reminder: ReminderEntity, onClick: () -> Unit, onToggleActive: (Boolean) -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -68,20 +70,41 @@ fun ReminderItem(reminder: ReminderEntity, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = reminder.title, style = MaterialTheme.typography.titleMedium)
-            if (reminder.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = reminder.description, style = MaterialTheme.typography.bodyMedium)
+        Row(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = reminder.title, 
+                    style = MaterialTheme.typography.titleMedium,
+                    textDecoration = if (!reminder.isActive) TextDecoration.LineThrough else null
+                )
+                if (reminder.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = reminder.description, style = MaterialTheme.typography.bodyMedium)
+                }
+                if (reminder.timeOfDay != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "Time: ${reminder.timeOfDay}", style = MaterialTheme.typography.bodySmall)
+                }
+                if (reminder.isRecurring) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "Recurring", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                } else {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "One-time", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                }
+                if (reminder.isDeferred) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "Deferred", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
             }
-            if (reminder.timeOfDay != null) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Time: ${reminder.timeOfDay}", style = MaterialTheme.typography.bodySmall)
-            }
-            if (reminder.isDeferred) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Deferred", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-            }
+            Switch(
+                checked = reminder.isActive,
+                onCheckedChange = onToggleActive
+            )
         }
     }
 }

@@ -21,6 +21,7 @@ class ReminderWorker(
         val notificationHelper = NotificationHelper(applicationContext)
 
         val reminder = repository.getReminderById(reminderId) ?: return Result.failure()
+        if (!reminder.isActive) return Result.success()
 
         // Show notification
         notificationHelper.showReminderNotification(reminder)

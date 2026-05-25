@@ -13,5 +13,7 @@ data class ReminderEntity(
     val recurringDays: List<Int>? = null, // e.g., [Calendar.MONDAY, Calendar.WEDNESDAY]
     val specificDate: Long? = null, // timestamp
     val isDeferred: Boolean = false,
-    val deferredUntil: Long? = null // timestamp
+    val deferredUntil: Long? = null, // timestamp
+    val isRecurring: Boolean = false,
+    val isActive: Boolean = true
 )

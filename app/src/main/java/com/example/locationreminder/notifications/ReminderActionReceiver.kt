@@ -54,12 +54,21 @@ class ReminderActionReceiver : BroadcastReceiver() {
                 }
                 ACTION_DISMISS -> {
                     // Just dismiss, reset deferred state if needed
-                    repository.updateReminder(
-                        reminder.copy(
-                            isDeferred = false,
-                            deferredUntil = null
-                        )
-                    )
+                    val updatedReminder = if (!reminder.isRecurring) {
+                        reminder.copy(isDeferred = false, deferredUntil = null, isActive = false)
+                    } else {
+                        reminder.copy(isDeferred = false, deferredUntil = null)
+                    }
+                    repository.updateReminder(updatedReminder)
+                }
+                ACTION_CLICK -> {
+                    if (!reminder.isRecurring) {
+                        repository.updateReminder(reminder.copy(isDeferred = false, deferredUntil = null, isActive = false))
+                    }
+                    val mainIntent = Intent(context, com.example.locationreminder.MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    }
+                    context.startActivity(mainIntent)
                 }
             }
         }
@@ -68,6 +77,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_DEFER = "com.example.locationreminder.ACTION_DEFER"
         const val ACTION_DISMISS = "com.example.locationreminder.ACTION_DISMISS"
+        const val ACTION_CLICK = "com.example.locationreminder.ACTION_CLICK"
         const val EXTRA_REMINDER_ID = "extra_reminder_id"
     }
 }

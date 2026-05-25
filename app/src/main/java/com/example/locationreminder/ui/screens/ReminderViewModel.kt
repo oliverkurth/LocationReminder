@@ -43,6 +43,12 @@ class ReminderViewModel(
     private val _specificDate = MutableStateFlow<Long?>(null)
     val specificDate: StateFlow<Long?> = _specificDate.asStateFlow()
 
+    private val _isRecurring = MutableStateFlow(false)
+    val isRecurring: StateFlow<Boolean> = _isRecurring.asStateFlow()
+
+    private val _isActive = MutableStateFlow(true)
+    val isActive: StateFlow<Boolean> = _isActive.asStateFlow()
+
     val allLocations: StateFlow<List<LocationEntity>> = repository.allLocations
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(), emptyList())
 
@@ -60,6 +66,8 @@ class ReminderViewModel(
                     _selectedLocationId.value = reminder.locationId
                     _timeOfDay.value = reminder.timeOfDay
                     _specificDate.value = reminder.specificDate
+                    _isRecurring.value = reminder.isRecurring
+                    _isActive.value = reminder.isActive
                 }
             }
         } else {
@@ -69,6 +77,8 @@ class ReminderViewModel(
             _selectedLocationId.value = null
             _timeOfDay.value = null
             _specificDate.value = null
+            _isRecurring.value = false
+            _isActive.value = true
         }
     }
 
@@ -77,6 +87,13 @@ class ReminderViewModel(
     fun updateLocation(locId: Long?) { _selectedLocationId.value = locId }
     fun updateTimeOfDay(time: String?) { _timeOfDay.value = time }
     fun updateSpecificDate(date: Long?) { _specificDate.value = date }
+    fun updateIsRecurring(recurring: Boolean) { _isRecurring.value = recurring }
+
+    fun toggleReminderActive(reminder: ReminderEntity) {
+        viewModelScope.launch {
+            repository.updateReminder(reminder.copy(isActive = !reminder.isActive))
+        }
+    }
 
     fun saveReminder(onSaved: () -> Unit) {
         if (_title.value.isBlank()) return
@@ -88,7 +105,9 @@ class ReminderViewModel(
                 description = _description.value,
                 locationId = _selectedLocationId.value,
                 timeOfDay = _timeOfDay.value,
-                specificDate = _specificDate.value
+                specificDate = _specificDate.value,
+                isRecurring = _isRecurring.value,
+                isActive = _isActive.value
             )
 
             val id = if (entity.id == 0L) {
