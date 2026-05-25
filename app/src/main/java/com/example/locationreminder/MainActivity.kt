@@ -1,6 +1,7 @@
 package com.example.locationreminder
 
 import android.Manifest
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -17,6 +18,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -28,10 +32,52 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
+data class SharedLocationData(val lat: Double, val lon: Double, val name: String?)
+
+fun parseSharedText(text: String): SharedLocationData? {
+    val qRegex = Regex("q=([0-9.-]+),([0-9.-]+)\\(([^)]+)\\)")
+    val qMatch = qRegex.find(text)
+    if (qMatch != null) {
+        val lat = qMatch.groupValues[1].toDoubleOrNull()
+        val lon = qMatch.groupValues[2].toDoubleOrNull()
+        val name = java.net.URLDecoder.decode(qMatch.groupValues[3], "UTF-8")
+        if (lat != null && lon != null) {
+            return SharedLocationData(lat, lon, name)
+        }
+    }
+
+    val geoRegex = Regex("geo:([0-9.-]+),([0-9.-]+)")
+    val geoMatch = geoRegex.find(text)
+    if (geoMatch != null) {
+        val lat = geoMatch.groupValues[1].toDoubleOrNull()
+        val lon = geoMatch.groupValues[2].toDoubleOrNull()
+        if (lat != null && lon != null) {
+            return SharedLocationData(lat, lon, null)
+        }
+    }
+    
+    val mapsRegex = Regex("maps\\.google\\.com/\\?q=([0-9.-]+),([0-9.-]+)")
+    val mapsMatch = mapsRegex.find(text)
+    if (mapsMatch != null) {
+        val lat = mapsMatch.groupValues[1].toDoubleOrNull()
+        val lon = mapsMatch.groupValues[2].toDoubleOrNull()
+        if (lat != null && lon != null) {
+            return SharedLocationData(lat, lon, null)
+        }
+    }
+
+    return null
+}
+
 class MainActivity : ComponentActivity() {
+    private var sharedLocationData by mutableStateOf<SharedLocationData?>(null)
+
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        handleIntent(intent)
+        
         setContent {
             LocationReminderTheme {
                 Surface(
@@ -58,7 +104,10 @@ class MainActivity : ComponentActivity() {
                                 LaunchedEffect(Unit) {
                                     LocationTrackingService.startService(this@MainActivity)
                                 }
-                                AppNavigation()
+                                AppNavigation(
+                                    sharedLocationData = sharedLocationData,
+                                    onSharedLocationHandled = { sharedLocationData = null }
+                                )
                             } else {
                                 PermissionScreen(
                                     permissionState = bgPermissionState,
@@ -69,7 +118,10 @@ class MainActivity : ComponentActivity() {
                             LaunchedEffect(Unit) {
                                 LocationTrackingService.startService(this@MainActivity)
                             }
-                            AppNavigation()
+                            AppNavigation(
+                                sharedLocationData = sharedLocationData,
+                                onSharedLocationHandled = { sharedLocationData = null }
+                            )
                         }
                     } else {
                         PermissionScreen(
@@ -78,6 +130,20 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent) {
+        if (intent.action == Intent.ACTION_SEND && intent.type == "text/plain") {
+            val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+            if (sharedText != null) {
+                sharedLocationData = parseSharedText(sharedText)
             }
         }
     }

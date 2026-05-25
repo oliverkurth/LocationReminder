@@ -80,6 +80,16 @@ class LocationViewModel(private val repository: AppRepository) : ViewModel() {
         _locationName.value = name
     }
 
+    fun setInitialSharedLocation(lat: Double, lon: Double, name: String?) {
+        val point = GeoPoint(lat, lon)
+        _selectedPoint.value = point
+        _mapCenter.value = point
+        hasInitializedCenter = false // Reset so the map will center on this new point
+        if (name != null) {
+            _locationName.value = name
+        }
+    }
+
     fun centerOnCurrentLocation(mapView: MapView) {
         val locationOverlay = mapView.overlays.filterIsInstance<MyLocationNewOverlay>().firstOrNull()
         locationOverlay?.myLocation?.let { point ->
@@ -141,6 +151,9 @@ class LocationViewModelFactory(private val context: Context) : ViewModelProvider
 @Composable
 fun MapScreen(
     locationId: Long,
+    initialLat: Double? = null,
+    initialLon: Double? = null,
+    initialName: String? = null,
     onNavigateBack: () -> Unit,
     viewModel: LocationViewModel = viewModel(factory = LocationViewModelFactory(LocalContext.current.applicationContext))
 ) {
@@ -181,6 +194,10 @@ fun MapScreen(
         Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
         Configuration.getInstance().userAgentValue = context.packageName
         viewModel.loadLocation(locationId)
+        
+        if (locationId == -1L && initialLat != null && initialLon != null) {
+            viewModel.setInitialSharedLocation(initialLat, initialLon, initialName)
+        }
     }
 
     Scaffold(
@@ -275,11 +292,8 @@ fun MapScreen(
                         }
                     },
                     update = { mapView ->
-                        // Only set center if it's the first load (map is at 0,0) or if we are editing an existing location
-                        // and the map center hasn't been initialized to that location yet.
-                        if (mapView.mapCenter.latitude == 0.0 && mapView.mapCenter.longitude == 0.0) {
-                            mapView.controller.setCenter(mapCenter)
-                        } else if (locationId != -1L && !viewModel.hasInitializedCenter) {
+                        // Center the map if it hasn't been initialized yet for this view model instance
+                        if (!viewModel.hasInitializedCenter) {
                             mapView.controller.setCenter(mapCenter)
                             viewModel.hasInitializedCenter = true
                         }
