@@ -88,6 +88,7 @@ class ReminderViewModel(
     fun updateTimeOfDay(time: String?) { _timeOfDay.value = time }
     fun updateSpecificDate(date: Long?) { _specificDate.value = date }
     fun updateIsRecurring(recurring: Boolean) { _isRecurring.value = recurring }
+    fun updateIsActive(active: Boolean) { _isActive.value = active }
 
     fun toggleReminderActive(reminder: ReminderEntity) {
         viewModelScope.launch {

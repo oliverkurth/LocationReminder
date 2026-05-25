@@ -30,6 +30,7 @@ fun AddEditReminderScreen(
     val selectedLocationId by viewModel.selectedLocationId.collectAsState()
     val timeOfDay by viewModel.timeOfDay.collectAsState()
     val isRecurring by viewModel.isRecurring.collectAsState()
+    val isActive by viewModel.isActive.collectAsState()
     val locations by viewModel.allLocations.collectAsState()
 
     LaunchedEffect(reminderId) {
@@ -113,6 +114,19 @@ fun AddEditReminderScreen(
             Spacer(modifier = Modifier.height(16.dp))
             
             Text("Triggers", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Active")
+                Spacer(modifier = Modifier.weight(1f))
+                Switch(
+                    checked = isActive,
+                    onCheckedChange = viewModel::updateIsActive
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
