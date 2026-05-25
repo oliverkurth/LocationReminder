@@ -29,6 +29,8 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 class LocationViewModel(private val repository: AppRepository) : ViewModel() {
     private val _currentLocation = MutableStateFlow<LocationEntity?>(null)
@@ -193,13 +195,17 @@ fun MapScreen(
                                 override fun longPressHelper(p: GeoPoint): Boolean = false
                             }
                             overlays.add(MapEventsOverlay(mapEventsReceiver))
+
+                            val myLocationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(ctx), this)
+                            myLocationOverlay.enableMyLocation()
+                            overlays.add(myLocationOverlay)
                         }
                     },
                     update = { mapView ->
                         mapView.controller.setCenter(mapCenter)
                         
-                        // Clear previous markers/polygons except the events overlay
-                        mapView.overlays.removeAll { it !is MapEventsOverlay }
+                        // Clear previous markers/polygons except the events overlay and location overlay
+                        mapView.overlays.removeAll { it !is MapEventsOverlay && it !is MyLocationNewOverlay }
                         
                         selectedPoint?.let { point ->
                             val marker = Marker(mapView).apply {
