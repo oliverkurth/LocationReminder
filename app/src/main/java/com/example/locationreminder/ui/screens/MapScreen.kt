@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -88,6 +89,14 @@ class LocationViewModel(private val repository: AppRepository) : ViewModel() {
         hasInitializedCenter = false // Reset so the map will center on this new point
         if (name != null) {
             _locationName.value = name
+        }
+    }
+
+    fun centerOnSelectedPoint(mapView: MapView) {
+        _selectedPoint.value?.let { point ->
+            mapView.controller.animateTo(point)
+            _mapCenter.value = point
+            hasInitializedCenter = true
         }
     }
 
@@ -215,6 +224,12 @@ fun MapScreen(
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                         }
+                    }
+                    IconButton(
+                        onClick = { mapViewRef?.let { viewModel.centerOnSelectedPoint(it) } },
+                        enabled = selectedPoint != null
+                    ) {
+                        Icon(Icons.Default.Place, contentDescription = "Center on Selected Location")
                     }
                     IconButton(
                         onClick = { mapViewRef?.let { viewModel.centerOnCurrentLocation(it) } }
