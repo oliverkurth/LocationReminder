@@ -12,7 +12,7 @@ sealed class Screen(val route: String) {
             val params = mutableListOf<String>()
             if (lat != null) params.add("lat=$lat")
             if (lon != null) params.add("lon=$lon")
-            if (name != null) params.add("name=${java.net.URLEncoder.encode(name, "UTF-8")}")
+            if (name != null) params.add("name=${android.net.Uri.encode(name)}")
             if (params.isNotEmpty()) {
                 route += "?" + params.joinToString("&")
             }

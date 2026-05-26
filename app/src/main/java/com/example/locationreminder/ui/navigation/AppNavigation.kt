@@ -74,7 +74,9 @@ fun AppNavigation(
             val locationId = backStackEntry.arguments?.getLong("locationId") ?: -1L
             val lat = backStackEntry.arguments?.getFloat("lat")?.takeIf { !it.isNaN() }
             val lon = backStackEntry.arguments?.getFloat("lon")?.takeIf { !it.isNaN() }
-            val name = backStackEntry.arguments?.getString("name")
+            val name = backStackEntry.arguments?.getString("name")?.let {
+                java.net.URLDecoder.decode(it, "UTF-8")
+            }
             
             MapScreen(
                 locationId = locationId,

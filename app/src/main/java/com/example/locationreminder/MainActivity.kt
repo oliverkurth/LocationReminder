@@ -40,7 +40,10 @@ fun parseSharedText(text: String): SharedLocationData? {
     if (qMatch != null) {
         val lat = qMatch.groupValues[1].toDoubleOrNull()
         val lon = qMatch.groupValues[2].toDoubleOrNull()
-        val name = java.net.URLDecoder.decode(qMatch.groupValues[3], "UTF-8")
+        var name = java.net.URLDecoder.decode(qMatch.groupValues[3], "UTF-8")
+        if (text.contains("omaps.app")) {
+            name = name.replace("_", " ")
+        }
         if (lat != null && lon != null) {
             return SharedLocationData(lat, lon, name)
         }
