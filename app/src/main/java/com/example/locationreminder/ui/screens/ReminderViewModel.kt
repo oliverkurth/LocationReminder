@@ -144,17 +144,24 @@ class ReminderViewModel(
     private fun scheduleWorkManager(reminderId: Long, reminder: ReminderEntity) {
         workManager.cancelAllWorkByTag("reminder_$reminderId")
 
-        if (reminder.specificDate != null && reminder.timeOfDay != null) {
+        if (reminder.timeOfDay != null) {
             val parts = reminder.timeOfDay.split(":")
             if (parts.size == 2) {
                 val hour = parts[0].toInt()
                 val minute = parts[1].toInt()
 
                 val calendar = Calendar.getInstance().apply {
-                    timeInMillis = reminder.specificDate
+                    if (reminder.specificDate != null) {
+                        timeInMillis = reminder.specificDate
+                    }
                     set(Calendar.HOUR_OF_DAY, hour)
                     set(Calendar.MINUTE, minute)
                     set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+
+                if (reminder.specificDate == null && calendar.timeInMillis <= System.currentTimeMillis()) {
+                    calendar.add(Calendar.DAY_OF_YEAR, 1)
                 }
 
                 val delay = calendar.timeInMillis - System.currentTimeMillis()

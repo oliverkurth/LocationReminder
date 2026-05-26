@@ -134,7 +134,7 @@ class LocationTrackingService : Service() {
                 if (reminder.isDeferred && reminder.deferredUntil != null && System.currentTimeMillis() < reminder.deferredUntil) {
                     continue // Skip deferred reminders
                 }
-                
+
                 reminder.locationId?.let { locId ->
                     val locationEntity = repository.getLocationById(locId)
                     if (locationEntity != null) {
@@ -144,6 +144,27 @@ class LocationTrackingService : Service() {
                         }
                         val distance = currentLocation.distanceTo(targetLocation)
                         if (distance <= locationEntity.radius) {
+
+                            // Check time condition if set
+                            if (reminder.timeOfDay != null) {
+                                val parts = reminder.timeOfDay.split(":")
+                                if (parts.size == 2) {
+                                    val hour = parts[0].toIntOrNull() ?: 0
+                                    val minute = parts[1].toIntOrNull() ?: 0
+                                    val calendar = java.util.Calendar.getInstance()
+                                    val currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+                                    val currentMinute = calendar.get(java.util.Calendar.MINUTE)
+
+                                    val currentTimeInMinutes = currentHour * 60 + currentMinute
+                                    val targetTimeInMinutes = hour * 60 + minute
+
+                                    if (currentTimeInMinutes < targetTimeInMinutes) {
+                                        // It's too early, don't trigger yet
+                                        return@let
+                                    }
+                                }
+                            }
+
                             // Trigger notification
                             notificationHelper.showReminderNotification(reminder)
                             
