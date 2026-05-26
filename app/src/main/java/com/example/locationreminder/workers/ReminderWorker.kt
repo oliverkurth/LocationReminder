@@ -88,17 +88,60 @@ class ReminderWorker(
 
                 val delay = calendar.timeInMillis - System.currentTimeMillis()
                 if (delay > 0) {
-                    val workData = androidx.work.Data.Builder()
-                        .putLong(KEY_REMINDER_ID, reminderId)
-                        .build()
+                    val alarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+                    val intent = android.content.Intent(applicationContext, com.example.locationreminder.workers.AlarmReceiver::class.java).apply {
+                        putExtra(KEY_REMINDER_ID, reminderId)
+                    }
+                    val pendingIntent = android.app.PendingIntent.getBroadcast(
+                        applicationContext,
+                        reminderId.toInt(),
+                        intent,
+                        android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
+                    )
 
-                    val workRequest = androidx.work.OneTimeWorkRequestBuilder<ReminderWorker>()
-                        .setInitialDelay(delay, java.util.concurrent.TimeUnit.MILLISECONDS)
-                        .setInputData(workData)
-                        .addTag("reminder_$reminderId")
-                        .build()
+                    try {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                            if (alarmManager.canScheduleExactAlarms()) {
+                                alarmManager.setExactAndAllowWhileIdle(
+                                    android.app.AlarmManager.RTC_WAKEUP,
+                                    calendar.timeInMillis,
+                                    pendingIntent
+                                )
+                            } else {
+                                // Fallback
+                                val workData = androidx.work.Data.Builder()
+                                    .putLong(KEY_REMINDER_ID, reminderId)
+                                    .build()
 
-                    androidx.work.WorkManager.getInstance(applicationContext).enqueue(workRequest)
+                                val workRequest = androidx.work.OneTimeWorkRequestBuilder<ReminderWorker>()
+                                    .setInitialDelay(delay, java.util.concurrent.TimeUnit.MILLISECONDS)
+                                    .setInputData(workData)
+                                    .addTag("reminder_$reminderId")
+                                    .build()
+
+                                androidx.work.WorkManager.getInstance(applicationContext).enqueue(workRequest)
+                            }
+                        } else {
+                            alarmManager.setExactAndAllowWhileIdle(
+                                android.app.AlarmManager.RTC_WAKEUP,
+                                calendar.timeInMillis,
+                                pendingIntent
+                            )
+                        }
+                    } catch (e: SecurityException) {
+                        // Fallback
+                        val workData = androidx.work.Data.Builder()
+                            .putLong(KEY_REMINDER_ID, reminderId)
+                            .build()
+
+                        val workRequest = androidx.work.OneTimeWorkRequestBuilder<ReminderWorker>()
+                            .setInitialDelay(delay, java.util.concurrent.TimeUnit.MILLISECONDS)
+                            .setInputData(workData)
+                            .addTag("reminder_$reminderId")
+                            .build()
+
+                        androidx.work.WorkManager.getInstance(applicationContext).enqueue(workRequest)
+                    }
                 }
             }
         }

@@ -1,6 +1,10 @@
 package com.example.locationreminder.ui.screens
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -21,6 +25,7 @@ import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 class ReminderViewModel(
+    private val context: Context,
     private val repository: AppRepository,
     private val workManager: WorkManager
 ) : ViewModel() {
@@ -126,6 +131,7 @@ class ReminderViewModel(
     fun deleteReminder(reminder: ReminderEntity) {
         viewModelScope.launch {
             repository.deleteReminder(reminder)
+            cancelAlarm(reminder.id)
             workManager.cancelAllWorkByTag("reminder_${reminder.id}")
         }
     }
@@ -141,8 +147,24 @@ class ReminderViewModel(
         }
     }
 
+    private fun cancelAlarm(reminderId: Long) {
+        val intent = Intent(context, com.example.locationreminder.workers.AlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            reminderId.toInt(),
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_NO_CREATE
+        )
+        if (pendingIntent != null) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.cancel(pendingIntent)
+            pendingIntent.cancel()
+        }
+    }
+
     private fun scheduleWorkManager(reminderId: Long, reminder: ReminderEntity) {
         workManager.cancelAllWorkByTag("reminder_$reminderId")
+        cancelAlarm(reminderId)
 
         if (reminder.timeOfDay != null) {
             val parts = reminder.timeOfDay.split(":")
@@ -166,17 +188,60 @@ class ReminderViewModel(
 
                 val delay = calendar.timeInMillis - System.currentTimeMillis()
                 if (delay > 0) {
-                    val workData = Data.Builder()
-                        .putLong(ReminderWorker.KEY_REMINDER_ID, reminderId)
-                        .build()
+                    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                    val intent = Intent(context, com.example.locationreminder.workers.AlarmReceiver::class.java).apply {
+                        putExtra(ReminderWorker.KEY_REMINDER_ID, reminderId)
+                    }
+                    val pendingIntent = PendingIntent.getBroadcast(
+                        context,
+                        reminderId.toInt(),
+                        intent,
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                    )
 
-                    val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
-                        .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-                        .setInputData(workData)
-                        .addTag("reminder_$reminderId")
-                        .build()
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            if (alarmManager.canScheduleExactAlarms()) {
+                                alarmManager.setExactAndAllowWhileIdle(
+                                    AlarmManager.RTC_WAKEUP,
+                                    calendar.timeInMillis,
+                                    pendingIntent
+                                )
+                            } else {
+                                // Fallback to WorkManager if permission is not granted
+                                val workData = Data.Builder()
+                                    .putLong(ReminderWorker.KEY_REMINDER_ID, reminderId)
+                                    .build()
 
-                    workManager.enqueue(workRequest)
+                                val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
+                                    .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                                    .setInputData(workData)
+                                    .addTag("reminder_$reminderId")
+                                    .build()
+
+                                workManager.enqueue(workRequest)
+                            }
+                        } else {
+                            alarmManager.setExactAndAllowWhileIdle(
+                                AlarmManager.RTC_WAKEUP,
+                                calendar.timeInMillis,
+                                pendingIntent
+                            )
+                        }
+                    } catch (e: SecurityException) {
+                        // Fallback to WorkManager
+                        val workData = Data.Builder()
+                            .putLong(ReminderWorker.KEY_REMINDER_ID, reminderId)
+                            .build()
+
+                        val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
+                            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                            .setInputData(workData)
+                            .addTag("reminder_$reminderId")
+                            .build()
+
+                        workManager.enqueue(workRequest)
+                    }
                 }
             }
         }
@@ -189,6 +254,6 @@ class ReminderViewModelFactory(private val context: Context) : ViewModelProvider
         val repository = AppRepository(database.locationDao(), database.reminderDao())
         val workManager = WorkManager.getInstance(context)
         @Suppress("UNCHECKED_CAST")
-        return ReminderViewModel(repository, workManager) as T
+        return ReminderViewModel(context, repository, workManager) as T
     }
 }

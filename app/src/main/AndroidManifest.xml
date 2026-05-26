@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <application
         android:allowBackup="true"
@@ -30,6 +32,10 @@
             
         <receiver
             android:name=".notifications.ReminderActionReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".workers.AlarmReceiver"
             android:exported="false" />
 
         <activity
