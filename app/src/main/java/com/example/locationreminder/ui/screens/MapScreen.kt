@@ -63,6 +63,7 @@ class LocationViewModel(private val repository: AppRepository) : ViewModel() {
                     val point = GeoPoint(loc.latitude, loc.longitude)
                     _selectedPoint.value = point
                     _mapCenter.value = point
+                    hasInitializedCenter = false // Reset so the map will center on this loaded point
                 }
             }
         }
