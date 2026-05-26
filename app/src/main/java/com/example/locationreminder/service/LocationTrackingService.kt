@@ -68,7 +68,16 @@ class LocationTrackingService : Service() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 locationResult.lastLocation?.let { location ->
-                    checkGeofences(location)
+                    if (location.hasAccuracy() && location.accuracy <= 100f) {
+                        checkGeofences(location)
+                    } else if (!location.hasAccuracy()) {
+                        // If no accuracy is provided, we might still want to check, 
+                        // but usually FusedLocationProviderClient provides accuracy.
+                        // For now, we'll be conservative and only accept locations with known good accuracy.
+                        Log.d("LocationService", "Ignoring location with no accuracy")
+                    } else {
+                        Log.d("LocationService", "Ignoring location with poor accuracy: ${location.accuracy}m")
+                    }
                 }
             }
         }
