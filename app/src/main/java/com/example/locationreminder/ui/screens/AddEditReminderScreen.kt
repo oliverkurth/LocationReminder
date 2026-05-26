@@ -222,11 +222,49 @@ fun AddEditReminderScreen(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
+            var showTimePicker by remember { mutableStateOf(false) }
+            val timePickerState = rememberTimePickerState(
+                initialHour = timeOfDay?.split(":")?.getOrNull(0)?.toIntOrNull() ?: 12,
+                initialMinute = timeOfDay?.split(":")?.getOrNull(1)?.toIntOrNull() ?: 0,
+                is24Hour = true
+            )
+
+            if (showTimePicker) {
+                AlertDialog(
+                    onDismissRequest = { showTimePicker = false },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            viewModel.updateTimeOfDay(String.format("%02d:%02d", timePickerState.hour, timePickerState.minute))
+                            showTimePicker = false
+                        }) {
+                            Text("OK")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showTimePicker = false }) {
+                            Text("Cancel")
+                        }
+                    },
+                    text = {
+                        TimePicker(state = timePickerState)
+                    }
+                )
+            }
+
             OutlinedTextField(
                 value = timeOfDay ?: "",
-                onValueChange = viewModel::updateTimeOfDay,
+                onValueChange = {},
+                readOnly = true,
                 label = { Text("Time (HH:mm)") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showTimePicker = true },
+                enabled = false,
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledBorderColor = MaterialTheme.colorScheme.outline,
+                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             )
             // For simplicity, we just use a text field for time and specific date can be added similarly
             // A real app would use TimePickerDialog and DatePickerDialog
