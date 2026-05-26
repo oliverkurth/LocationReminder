@@ -51,6 +51,11 @@ class ReminderViewModel(
     private val _isRecurring = MutableStateFlow(false)
     val isRecurring: StateFlow<Boolean> = _isRecurring.asStateFlow()
 
+    private val _recurringDays = MutableStateFlow<List<Int>>(listOf(
+        Calendar.SUNDAY, Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY, Calendar.FRIDAY, Calendar.SATURDAY
+    ))
+    val recurringDays: StateFlow<List<Int>> = _recurringDays.asStateFlow()
+
     private val _isActive = MutableStateFlow(true)
     val isActive: StateFlow<Boolean> = _isActive.asStateFlow()
 
@@ -72,6 +77,9 @@ class ReminderViewModel(
                     _timeOfDay.value = reminder.timeOfDay
                     _specificDate.value = reminder.specificDate
                     _isRecurring.value = reminder.isRecurring
+                    _recurringDays.value = reminder.recurringDays ?: listOf(
+                        Calendar.SUNDAY, Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY, Calendar.FRIDAY, Calendar.SATURDAY
+                    )
                     _isActive.value = reminder.isActive
                 }
             }
@@ -83,6 +91,9 @@ class ReminderViewModel(
             _timeOfDay.value = null
             _specificDate.value = null
             _isRecurring.value = false
+            _recurringDays.value = listOf(
+                Calendar.SUNDAY, Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY, Calendar.FRIDAY, Calendar.SATURDAY
+            )
             _isActive.value = true
         }
     }
@@ -93,6 +104,15 @@ class ReminderViewModel(
     fun updateTimeOfDay(time: String?) { _timeOfDay.value = time }
     fun updateSpecificDate(date: Long?) { _specificDate.value = date }
     fun updateIsRecurring(recurring: Boolean) { _isRecurring.value = recurring }
+    fun toggleRecurringDay(day: Int) {
+        val current = _recurringDays.value.toMutableList()
+        if (current.contains(day)) {
+            current.remove(day)
+        } else {
+            current.add(day)
+        }
+        _recurringDays.value = current
+    }
     fun updateIsActive(active: Boolean) { _isActive.value = active }
 
     fun toggleReminderActive(reminder: ReminderEntity) {
@@ -111,6 +131,7 @@ class ReminderViewModel(
                 description = _description.value,
                 locationId = _selectedLocationId.value,
                 timeOfDay = _timeOfDay.value,
+                recurringDays = _recurringDays.value,
                 specificDate = _specificDate.value,
                 isRecurring = _isRecurring.value,
                 isActive = _isActive.value
@@ -184,6 +205,13 @@ class ReminderViewModel(
 
                 if (reminder.specificDate == null && calendar.timeInMillis <= System.currentTimeMillis()) {
                     calendar.add(Calendar.DAY_OF_YEAR, 1)
+                }
+
+                // If it's recurring and we have selected days, find the next valid day
+                if (reminder.isRecurring && reminder.recurringDays != null && reminder.recurringDays.isNotEmpty()) {
+                    while (!reminder.recurringDays.contains(calendar.get(Calendar.DAY_OF_WEEK))) {
+                        calendar.add(Calendar.DAY_OF_YEAR, 1)
+                    }
                 }
 
                 val delay = calendar.timeInMillis - System.currentTimeMillis()

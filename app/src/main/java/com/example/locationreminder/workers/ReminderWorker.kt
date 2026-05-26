@@ -72,7 +72,7 @@ class ReminderWorker(
             deferredUntil = System.currentTimeMillis() + 60 * 60 * 1000 // 1 hour cooldown
         ))
 
-        // If it's recurring, schedule the next one for tomorrow
+        // If it's recurring, schedule the next one for tomorrow (or next valid day)
         if (reminder.isRecurring && reminder.timeOfDay != null) {
             val parts = reminder.timeOfDay.split(":")
             if (parts.size == 2) {
@@ -84,6 +84,12 @@ class ReminderWorker(
                     set(java.util.Calendar.SECOND, 0)
                     set(java.util.Calendar.MILLISECOND, 0)
                     add(java.util.Calendar.DAY_OF_YEAR, 1) // Tomorrow
+                }
+
+                if (reminder.recurringDays != null && reminder.recurringDays.isNotEmpty()) {
+                    while (!reminder.recurringDays.contains(calendar.get(java.util.Calendar.DAY_OF_WEEK))) {
+                        calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
+                    }
                 }
 
                 val delay = calendar.timeInMillis - System.currentTimeMillis()

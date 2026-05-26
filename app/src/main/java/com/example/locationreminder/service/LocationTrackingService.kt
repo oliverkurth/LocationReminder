@@ -145,6 +145,14 @@ class LocationTrackingService : Service() {
                         val distance = currentLocation.distanceTo(targetLocation)
                         if (distance <= locationEntity.radius) {
 
+                            // Check recurring days condition
+                            if (reminder.recurringDays != null && reminder.recurringDays.isNotEmpty()) {
+                                val currentDay = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
+                                if (!reminder.recurringDays.contains(currentDay)) {
+                                    return@let // Skip if today is not a selected recurring day
+                                }
+                            }
+
                             // Check time condition if set
                             if (reminder.timeOfDay != null) {
                                 val parts = reminder.timeOfDay.split(":")

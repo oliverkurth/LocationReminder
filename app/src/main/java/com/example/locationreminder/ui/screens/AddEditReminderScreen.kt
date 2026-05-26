@@ -1,15 +1,22 @@
 package com.example.locationreminder.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.util.Calendar
 
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +37,7 @@ fun AddEditReminderScreen(
     val selectedLocationId by viewModel.selectedLocationId.collectAsState()
     val timeOfDay by viewModel.timeOfDay.collectAsState()
     val isRecurring by viewModel.isRecurring.collectAsState()
+    val recurringDays by viewModel.recurringDays.collectAsState()
     val isActive by viewModel.isActive.collectAsState()
     val locations by viewModel.allLocations.collectAsState()
 
@@ -139,6 +147,41 @@ fun AddEditReminderScreen(
                     checked = isRecurring,
                     onCheckedChange = viewModel::updateIsRecurring
                 )
+            }
+
+            if (isRecurring) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    val days = listOf(
+                        "S" to Calendar.SUNDAY,
+                        "M" to Calendar.MONDAY,
+                        "T" to Calendar.TUESDAY,
+                        "W" to Calendar.WEDNESDAY,
+                        "T" to Calendar.THURSDAY,
+                        "F" to Calendar.FRIDAY,
+                        "S" to Calendar.SATURDAY
+                    )
+                    days.forEach { (label, dayValue) ->
+                        val isSelected = recurringDays.contains(dayValue)
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable { viewModel.toggleRecurringDay(dayValue) },
+                            contentAlignment = androidx.compose.ui.Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
 
