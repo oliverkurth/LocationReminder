@@ -129,62 +129,62 @@ class LocationTrackingService : Service() {
 
     private fun checkGeofences(currentLocation: Location) {
         serviceScope.launch {
-            val reminders = repository.getLocationBasedReminders()
-            for (reminder in reminders) {
+            val remindersWithLocations = repository.getLocationBasedRemindersWithLocation()
+            for (item in remindersWithLocations) {
+                val reminder = item.reminder
+                val locationEntity = item.location
+
                 if (reminder.isDeferred && reminder.deferredUntil != null && System.currentTimeMillis() < reminder.deferredUntil) {
                     continue // Skip deferred reminders
                 }
 
-                reminder.locationId?.let { locId ->
-                    val locationEntity = repository.getLocationById(locId)
-                    if (locationEntity != null) {
-                        val targetLocation = Location("").apply {
-                            latitude = locationEntity.latitude
-                            longitude = locationEntity.longitude
-                        }
-                        val distance = currentLocation.distanceTo(targetLocation)
-                        if (distance <= locationEntity.radius) {
+                if (locationEntity != null) {
+                    val targetLocation = Location("").apply {
+                        latitude = locationEntity.latitude
+                        longitude = locationEntity.longitude
+                    }
+                    val distance = currentLocation.distanceTo(targetLocation)
+                    if (distance <= locationEntity.radius) {
 
-                            // Check recurring days condition
-                            if (reminder.recurringDays != null && reminder.recurringDays.isNotEmpty()) {
-                                val currentDay = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
-                                if (!reminder.recurringDays.contains(currentDay)) {
-                                    return@let // Skip if today is not a selected recurring day
+                        // Check recurring days condition
+                        if (reminder.recurringDays != null && reminder.recurringDays.isNotEmpty()) {
+                            val currentDay = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
+                            if (!reminder.recurringDays.contains(currentDay)) {
+                                continue // Skip if today is not a selected recurring day
+                            }
+                        }
+
+                        // Check time condition if set
+                        if (reminder.timeOfDay != null) {
+                            val parts = reminder.timeOfDay.split(":")
+                            if (parts.size == 2) {
+                                val hour = parts[0].toIntOrNull() ?: 0
+                                val minute = parts[1].toIntOrNull() ?: 0
+                                val calendar = java.util.Calendar.getInstance()
+                                val currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+                                val currentMinute = calendar.get(java.util.Calendar.MINUTE)
+
+                                val currentTimeInMinutes = currentHour * 60 + currentMinute
+                                val targetTimeInMinutes = hour * 60 + minute
+
+                                if (currentTimeInMinutes < targetTimeInMinutes) {
+                                    // It's too early, don't trigger yet
+                                    continue
                                 }
                             }
-
-                            // Check time condition if set
-                            if (reminder.timeOfDay != null) {
-                                val parts = reminder.timeOfDay.split(":")
-                                if (parts.size == 2) {
-                                    val hour = parts[0].toIntOrNull() ?: 0
-                                    val minute = parts[1].toIntOrNull() ?: 0
-                                    val calendar = java.util.Calendar.getInstance()
-                                    val currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
-                                    val currentMinute = calendar.get(java.util.Calendar.MINUTE)
-
-                                    val currentTimeInMinutes = currentHour * 60 + currentMinute
-                                    val targetTimeInMinutes = hour * 60 + minute
-
-                                    if (currentTimeInMinutes < targetTimeInMinutes) {
-                                        // It's too early, don't trigger yet
-                                        return@let
-                                    }
-                                }
-                            }
-
-                            // Trigger notification
-                            notificationHelper.showReminderNotification(reminder)
-                            
-                            // Mark as deferred/done or we might keep triggering it. 
-                            // For simplicity, we'll auto-defer it for a long time or just let the user dismiss it.
-                            // To prevent spamming, we can set a temporary deferred state.
-                            val updatedReminder = reminder.copy(
-                                isDeferred = true,
-                                deferredUntil = System.currentTimeMillis() + 60 * 60 * 1000 // 1 hour cooldown
-                            )
-                            repository.updateReminder(updatedReminder)
                         }
+
+                        // Trigger notification
+                        notificationHelper.showReminderNotification(reminder)
+                        
+                        // Mark as deferred/done or we might keep triggering it. 
+                        // For simplicity, we'll auto-defer it for a long time or just let the user dismiss it.
+                        // To prevent spamming, we can set a temporary deferred state.
+                        val updatedReminder = reminder.copy(
+                            isDeferred = true,
+                            deferredUntil = System.currentTimeMillis() + 60 * 60 * 1000 // 1 hour cooldown
+                        )
+                        repository.updateReminder(updatedReminder)
                     }
                 }
             }

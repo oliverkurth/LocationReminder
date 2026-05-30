@@ -4,6 +4,7 @@ import com.example.locationreminder.data.LocationDao
 import com.example.locationreminder.data.LocationEntity
 import com.example.locationreminder.data.ReminderDao
 import com.example.locationreminder.data.ReminderEntity
+import com.example.locationreminder.data.ReminderWithLocation
 import kotlinx.coroutines.flow.Flow
 
 class AppRepository(
@@ -38,6 +39,10 @@ class AppRepository(
 
     suspend fun getLocationBasedReminders(): List<ReminderEntity> {
         return reminderDao.getLocationBasedReminders()
+    }
+
+    suspend fun getLocationBasedRemindersWithLocation(): List<ReminderWithLocation> {
+        return reminderDao.getLocationBasedRemindersWithLocation()
     }
 
     suspend fun insertReminder(reminder: ReminderEntity): Long {
