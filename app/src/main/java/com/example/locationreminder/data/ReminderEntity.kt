@@ -15,5 +15,6 @@ data class ReminderEntity(
     val isDeferred: Boolean = false,
     val deferredUntil: Long? = null, // timestamp
     val isRecurring: Boolean = false,
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val lastTriggeredTimestamp: Long? = null
 )

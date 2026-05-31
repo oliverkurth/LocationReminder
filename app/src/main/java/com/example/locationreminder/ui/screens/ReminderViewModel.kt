@@ -115,6 +115,16 @@ class ReminderViewModel(
     }
     fun updateIsActive(active: Boolean) { _isActive.value = active }
 
+    fun resetTriggerState() {
+        _currentReminder.value?.let { reminder ->
+            viewModelScope.launch {
+                val updated = reminder.copy(lastTriggeredTimestamp = null)
+                repository.updateReminder(updated)
+                _currentReminder.value = updated
+            }
+        }
+    }
+
     fun toggleReminderActive(reminder: ReminderEntity) {
         viewModelScope.launch {
             repository.updateReminder(reminder.copy(isActive = !reminder.isActive))
@@ -134,7 +144,8 @@ class ReminderViewModel(
                 recurringDays = _recurringDays.value,
                 specificDate = _specificDate.value,
                 isRecurring = _isRecurring.value,
-                isActive = _isActive.value
+                isActive = _isActive.value,
+                lastTriggeredTimestamp = _currentReminder.value?.lastTriggeredTimestamp
             )
 
             val id = if (entity.id == 0L) {

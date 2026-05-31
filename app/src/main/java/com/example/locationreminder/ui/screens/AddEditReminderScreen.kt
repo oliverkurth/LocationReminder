@@ -39,6 +39,7 @@ fun AddEditReminderScreen(
     val isRecurring by viewModel.isRecurring.collectAsState()
     val recurringDays by viewModel.recurringDays.collectAsState()
     val isActive by viewModel.isActive.collectAsState()
+    val currentReminder by viewModel.currentReminder.collectAsState()
     val locations by viewModel.allLocations.collectAsState()
 
     LaunchedEffect(reminderId) {
@@ -266,8 +267,16 @@ fun AddEditReminderScreen(
                     disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
-            // For simplicity, we just use a text field for time and specific date can be added similarly
-            // A real app would use TimePickerDialog and DatePickerDialog
+            if (currentReminder?.lastTriggeredTimestamp != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = { viewModel.resetTriggerState() },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Text("Reset Today's Trigger")
+                }
+            }
         }
     }
 }

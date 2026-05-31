@@ -127,6 +127,14 @@ class LocationTrackingService : Service() {
         }
     }
 
+    private fun isToday(timestamp: Long?): Boolean {
+        if (timestamp == null) return false
+        val triggerCalendar = java.util.Calendar.getInstance().apply { timeInMillis = timestamp }
+        val currentCalendar = java.util.Calendar.getInstance()
+        return triggerCalendar.get(java.util.Calendar.YEAR) == currentCalendar.get(java.util.Calendar.YEAR) &&
+               triggerCalendar.get(java.util.Calendar.DAY_OF_YEAR) == currentCalendar.get(java.util.Calendar.DAY_OF_YEAR)
+    }
+
     private fun checkGeofences(currentLocation: Location) {
         serviceScope.launch {
             val remindersWithLocations = repository.getLocationBasedRemindersWithLocation()
@@ -145,6 +153,11 @@ class LocationTrackingService : Service() {
                     }
                     val distance = currentLocation.distanceTo(targetLocation)
                     if (distance <= locationEntity.radius) {
+
+                        // Check if it's a recurring reminder that already triggered today
+                        if (reminder.isRecurring && isToday(reminder.lastTriggeredTimestamp)) {
+                            continue
+                        }
 
                         // Check recurring days condition
                         if (reminder.recurringDays != null && reminder.recurringDays.isNotEmpty()) {
@@ -182,7 +195,8 @@ class LocationTrackingService : Service() {
                         // To prevent spamming, we can set a temporary deferred state.
                         val updatedReminder = reminder.copy(
                             isDeferred = true,
-                            deferredUntil = System.currentTimeMillis() + 60 * 60 * 1000 // 1 hour cooldown
+                            deferredUntil = System.currentTimeMillis() + 60 * 60 * 1000, // 1 hour cooldown
+                            lastTriggeredTimestamp = System.currentTimeMillis()
                         )
                         repository.updateReminder(updatedReminder)
                     }

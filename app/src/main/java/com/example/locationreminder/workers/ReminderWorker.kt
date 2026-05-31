@@ -69,7 +69,8 @@ class ReminderWorker(
         // Set a cooldown so LocationTrackingService doesn't immediately re-trigger it
         repository.updateReminder(reminder.copy(
             isDeferred = true,
-            deferredUntil = System.currentTimeMillis() + 60 * 60 * 1000 // 1 hour cooldown
+            deferredUntil = System.currentTimeMillis() + 60 * 60 * 1000, // 1 hour cooldown
+            lastTriggeredTimestamp = System.currentTimeMillis()
         ))
 
         // If it's recurring, schedule the next one for tomorrow (or next valid day)
