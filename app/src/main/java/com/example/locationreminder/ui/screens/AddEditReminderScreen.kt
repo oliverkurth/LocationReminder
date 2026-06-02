@@ -267,7 +267,17 @@ fun AddEditReminderScreen(
                     disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
-            if (currentReminder?.lastTriggeredTimestamp != null) {
+            val lastTriggered = currentReminder?.lastTriggeredTimestamp
+            val isTriggeredToday = if (lastTriggered != null) {
+                val triggerCalendar = Calendar.getInstance().apply { timeInMillis = lastTriggered }
+                val currentCalendar = Calendar.getInstance()
+                triggerCalendar.get(Calendar.YEAR) == currentCalendar.get(Calendar.YEAR) &&
+                triggerCalendar.get(Calendar.DAY_OF_YEAR) == currentCalendar.get(Calendar.DAY_OF_YEAR)
+            } else {
+                false
+            }
+
+            if (isTriggeredToday) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = { viewModel.resetTriggerState() },
