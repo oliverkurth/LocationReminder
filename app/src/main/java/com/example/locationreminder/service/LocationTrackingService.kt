@@ -73,6 +73,13 @@ class LocationTrackingService : Service() {
                 locationResult.lastLocation?.let { location ->
                     if (location.hasAccuracy() && location.accuracy <= 100f) {
                         lastKnownLocation = location
+                        // Save to SharedPreferences to survive process death
+                        val prefs = applicationContext.getSharedPreferences("location_prefs", Context.MODE_PRIVATE)
+                        prefs.edit().apply {
+                            putFloat("last_lat", location.latitude.toFloat())
+                            putFloat("last_lon", location.longitude.toFloat())
+                            apply()
+                        }
                         checkGeofences(location)
                     } else if (!location.hasAccuracy()) {
                         // If no accuracy is provided, we might still want to check, 
