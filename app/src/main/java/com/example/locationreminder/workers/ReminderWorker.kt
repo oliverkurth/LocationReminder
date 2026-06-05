@@ -38,7 +38,11 @@ class ReminderWorker(
 
                     val fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
                     try {
-                        val currentLocation = fusedLocationClient.lastLocation.await()
+                        var currentLocation = fusedLocationClient.lastLocation.await()
+                        if (currentLocation == null) {
+                            currentLocation = com.example.locationreminder.service.LocationTrackingService.lastKnownLocation
+                        }
+
                         if (currentLocation != null) {
                             val targetLocation = Location("").apply {
                                 latitude = locationEntity.latitude

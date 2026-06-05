@@ -42,6 +42,9 @@ class LocationTrackingService : Service() {
         const val CHANNEL_ID = "location_tracking_channel"
         const val NOTIFICATION_ID = 1001
         
+        @Volatile
+        var lastKnownLocation: Location? = null
+
         fun startService(context: Context) {
             val intent = Intent(context, LocationTrackingService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -69,6 +72,7 @@ class LocationTrackingService : Service() {
             override fun onLocationResult(locationResult: LocationResult) {
                 locationResult.lastLocation?.let { location ->
                     if (location.hasAccuracy() && location.accuracy <= 100f) {
+                        lastKnownLocation = location
                         checkGeofences(location)
                     } else if (!location.hasAccuracy()) {
                         // If no accuracy is provided, we might still want to check, 
