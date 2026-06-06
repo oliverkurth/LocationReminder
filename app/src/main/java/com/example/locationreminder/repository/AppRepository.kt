@@ -26,6 +26,10 @@ class AppRepository(
         locationDao.updateLocation(location)
     }
 
+    suspend fun updateLocations(locations: List<LocationEntity>) {
+        locationDao.updateLocations(locations)
+    }
+
     suspend fun deleteLocation(location: LocationEntity) {
         locationDao.deleteLocation(location)
     }
@@ -51,6 +55,10 @@ class AppRepository(
 
     suspend fun updateReminder(reminder: ReminderEntity) {
         reminderDao.updateReminder(reminder)
+    }
+
+    suspend fun updateReminders(reminders: List<ReminderEntity>) {
+        reminderDao.updateReminders(reminders)
     }
 
     suspend fun deleteReminder(reminder: ReminderEntity) {

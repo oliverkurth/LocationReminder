@@ -9,5 +9,6 @@ data class LocationEntity(
     val name: String,
     val latitude: Double,
     val longitude: Double,
-    val radius: Float
+    val radius: Float,
+    val displayOrder: Int = 0
 )

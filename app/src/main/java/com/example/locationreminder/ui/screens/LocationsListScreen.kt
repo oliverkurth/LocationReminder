@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -52,7 +54,9 @@ fun LocationsListScreen(
             items(locations) { location ->
                 LocationItem(
                     location = location,
-                    onClick = { onNavigateToEditLocation(location.id) }
+                    onClick = { onNavigateToEditLocation(location.id) },
+                    onMoveUp = { viewModel.moveLocationUp(location) },
+                    onMoveDown = { viewModel.moveLocationDown(location) }
                 )
             }
         }
@@ -60,7 +64,12 @@ fun LocationsListScreen(
 }
 
 @Composable
-fun LocationItem(location: LocationEntity, onClick: () -> Unit) {
+fun LocationItem(
+    location: LocationEntity,
+    onClick: () -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -68,10 +77,25 @@ fun LocationItem(location: LocationEntity, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-            Text(text = location.name, style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "Radius: ${location.radius.toInt()}m", style = MaterialTheme.typography.bodyMedium)
+        Row(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = location.name, style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = "Radius: ${location.radius.toInt()}m", style = MaterialTheme.typography.bodyMedium)
+            }
+            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                IconButton(onClick = onMoveUp, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move Up")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                IconButton(onClick = onMoveDown, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move Down")
+                }
+            }
         }
     }
 }

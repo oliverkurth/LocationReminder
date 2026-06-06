@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -54,7 +56,9 @@ fun HomeScreen(
                 ReminderItem(
                     reminder = reminder,
                     onClick = { onNavigateToEditReminder(reminder.id) },
-                    onToggleActive = { viewModel.toggleReminderActive(reminder) }
+                    onToggleActive = { viewModel.toggleReminderActive(reminder) },
+                    onMoveUp = { viewModel.moveReminderUp(reminder) },
+                    onMoveDown = { viewModel.moveReminderDown(reminder) }
                 )
             }
         }
@@ -62,7 +66,13 @@ fun HomeScreen(
 }
 
 @Composable
-fun ReminderItem(reminder: ReminderEntity, onClick: () -> Unit, onToggleActive: (Boolean) -> Unit) {
+fun ReminderItem(
+    reminder: ReminderEntity,
+    onClick: () -> Unit,
+    onToggleActive: (Boolean) -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -101,10 +111,19 @@ fun ReminderItem(reminder: ReminderEntity, onClick: () -> Unit, onToggleActive: 
                     Text(text = "Deferred", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }
-            Switch(
-                checked = reminder.isActive,
-                onCheckedChange = onToggleActive
-            )
+            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                IconButton(onClick = onMoveUp, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move Up")
+                }
+                Switch(
+                    checked = reminder.isActive,
+                    onCheckedChange = onToggleActive,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+                IconButton(onClick = onMoveDown, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move Down")
+                }
+            }
         }
     }
 }
