@@ -124,15 +124,15 @@ fun ReminderItem(
                     Text(text = "Deferred", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }
-            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                IconButton(onClick = {}, modifier = dragModifier.size(24.dp)) {
-                    Icon(Icons.Default.DragHandle, contentDescription = "Drag to reorder")
-                }
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Switch(
                     checked = reminder.isActive,
                     onCheckedChange = onToggleActive,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    modifier = Modifier.padding(end = 8.dp)
                 )
+                IconButton(onClick = {}, modifier = dragModifier.size(24.dp)) {
+                    Icon(Icons.Default.DragHandle, contentDescription = "Drag to reorder")
+                }
             }
         }
     }
