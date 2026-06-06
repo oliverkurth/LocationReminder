@@ -66,6 +66,7 @@ dependencies {
     // Location
     implementation(libs.play.services.location)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    implementation("sh.calvin.reorderable:reorderable:3.1.0")
     
     // Navigation
     implementation(libs.navigation.compose)

@@ -59,11 +59,24 @@ class ReminderViewModel(
     private val _isActive = MutableStateFlow(true)
     val isActive: StateFlow<Boolean> = _isActive.asStateFlow()
 
-    val allLocations: StateFlow<List<LocationEntity>> = repository.allLocations
-        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(), emptyList())
+    private val _allLocations = MutableStateFlow<List<LocationEntity>>(emptyList())
+    val allLocations: StateFlow<List<LocationEntity>> = _allLocations.asStateFlow()
 
-    val allReminders: StateFlow<List<ReminderEntity>> = repository.allReminders
-        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(), emptyList())
+    private val _allReminders = MutableStateFlow<List<ReminderEntity>>(emptyList())
+    val allReminders: StateFlow<List<ReminderEntity>> = _allReminders.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            repository.allLocations.collect {
+                _allLocations.value = it
+            }
+        }
+        viewModelScope.launch {
+            repository.allReminders.collect {
+                _allReminders.value = it
+            }
+        }
+    }
 
     fun loadReminder(id: Long) {
         if (id != -1L) {
@@ -168,31 +181,19 @@ class ReminderViewModel(
         }
     }
 
-    fun moveReminderUp(reminder: ReminderEntity) {
-        val currentList = allReminders.value
-        val index = currentList.indexOf(reminder)
-        if (index > 0) {
-            val updatedList = currentList.mapIndexed { i, item -> item.copy(displayOrder = i) }.toMutableList()
-            val temp = updatedList[index]
-            updatedList[index] = updatedList[index - 1].copy(displayOrder = index)
-            updatedList[index - 1] = temp.copy(displayOrder = index - 1)
-            viewModelScope.launch {
-                repository.updateReminders(updatedList)
-            }
-        }
+    fun onReminderMoved(fromIndex: Int, toIndex: Int) {
+        val currentList = _allReminders.value.toMutableList()
+        val item = currentList.removeAt(fromIndex)
+        currentList.add(toIndex, item)
+        _allReminders.value = currentList
     }
 
-    fun moveReminderDown(reminder: ReminderEntity) {
-        val currentList = allReminders.value
-        val index = currentList.indexOf(reminder)
-        if (index >= 0 && index < currentList.size - 1) {
-            val updatedList = currentList.mapIndexed { i, item -> item.copy(displayOrder = i) }.toMutableList()
-            val temp = updatedList[index]
-            updatedList[index] = updatedList[index + 1].copy(displayOrder = index)
-            updatedList[index + 1] = temp.copy(displayOrder = index + 1)
-            viewModelScope.launch {
-                repository.updateReminders(updatedList)
-            }
+    fun onReminderDragStopped() {
+        val currentList = _allReminders.value.mapIndexed { index, item -> 
+            item.copy(displayOrder = index) 
+        }
+        viewModelScope.launch {
+            repository.updateReminders(currentList)
         }
     }
 
@@ -207,31 +208,19 @@ class ReminderViewModel(
         }
     }
 
-    fun moveLocationUp(location: LocationEntity) {
-        val currentList = allLocations.value
-        val index = currentList.indexOf(location)
-        if (index > 0) {
-            val updatedList = currentList.mapIndexed { i, item -> item.copy(displayOrder = i) }.toMutableList()
-            val temp = updatedList[index]
-            updatedList[index] = updatedList[index - 1].copy(displayOrder = index)
-            updatedList[index - 1] = temp.copy(displayOrder = index - 1)
-            viewModelScope.launch {
-                repository.updateLocations(updatedList)
-            }
-        }
+    fun onLocationMoved(fromIndex: Int, toIndex: Int) {
+        val currentList = _allLocations.value.toMutableList()
+        val item = currentList.removeAt(fromIndex)
+        currentList.add(toIndex, item)
+        _allLocations.value = currentList
     }
 
-    fun moveLocationDown(location: LocationEntity) {
-        val currentList = allLocations.value
-        val index = currentList.indexOf(location)
-        if (index >= 0 && index < currentList.size - 1) {
-            val updatedList = currentList.mapIndexed { i, item -> item.copy(displayOrder = i) }.toMutableList()
-            val temp = updatedList[index]
-            updatedList[index] = updatedList[index + 1].copy(displayOrder = index)
-            updatedList[index + 1] = temp.copy(displayOrder = index + 1)
-            viewModelScope.launch {
-                repository.updateLocations(updatedList)
-            }
+    fun onLocationDragStopped() {
+        val currentList = _allLocations.value.mapIndexed { index, item -> 
+            item.copy(displayOrder = index) 
+        }
+        viewModelScope.launch {
+            repository.updateLocations(currentList)
         }
     }
 

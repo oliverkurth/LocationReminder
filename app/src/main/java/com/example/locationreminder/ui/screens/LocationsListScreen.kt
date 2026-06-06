@@ -7,8 +7,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.animation.core.animateDpAsState
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -28,6 +31,10 @@ fun LocationsListScreen(
     viewModel: ReminderViewModel = viewModel(factory = ReminderViewModelFactory(LocalContext.current.applicationContext))
 ) {
     val locations by viewModel.allLocations.collectAsState()
+    val lazyListState = rememberLazyListState()
+    val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        viewModel.onLocationMoved(from.index, to.index)
+    }
 
     Scaffold(
         topBar = {
@@ -47,17 +54,22 @@ fun LocationsListScreen(
         }
     ) { padding ->
         LazyColumn(
+            state = lazyListState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            items(locations) { location ->
-                LocationItem(
-                    location = location,
-                    onClick = { onNavigateToEditLocation(location.id) },
-                    onMoveUp = { viewModel.moveLocationUp(location) },
-                    onMoveDown = { viewModel.moveLocationDown(location) }
-                )
+            items(locations, key = { it.id }) { location ->
+                ReorderableItem(reorderableState, key = location.id) { isDragging ->
+                    LocationItem(
+                        location = location,
+                        isDragging = isDragging,
+                        onClick = { onNavigateToEditLocation(location.id) },
+                        dragModifier = Modifier.draggableHandle(
+                            onDragStopped = { viewModel.onLocationDragStopped() }
+                        )
+                    )
+                }
             }
         }
     }
@@ -66,16 +78,17 @@ fun LocationsListScreen(
 @Composable
 fun LocationItem(
     location: LocationEntity,
+    isDragging: Boolean,
     onClick: () -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit
+    dragModifier: Modifier = Modifier
 ) {
+    val elevation by animateDpAsState(if (isDragging) 8.dp else 4.dp)
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
     ) {
         Row(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -88,12 +101,8 @@ fun LocationItem(
                 Text(text = "Radius: ${location.radius.toInt()}m", style = MaterialTheme.typography.bodyMedium)
             }
             Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                IconButton(onClick = onMoveUp, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move Up")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                IconButton(onClick = onMoveDown, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move Down")
+                IconButton(onClick = {}, modifier = dragModifier.size(24.dp)) {
+                    Icon(Icons.Default.DragHandle, contentDescription = "Drag to reorder")
                 }
             }
         }

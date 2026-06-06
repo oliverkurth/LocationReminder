@@ -7,8 +7,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.animation.core.animateDpAsState
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,6 +32,10 @@ fun HomeScreen(
     viewModel: ReminderViewModel = viewModel(factory = ReminderViewModelFactory(LocalContext.current.applicationContext))
 ) {
     val reminders by viewModel.allReminders.collectAsState()
+    val lazyListState = rememberLazyListState()
+    val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        viewModel.onReminderMoved(from.index, to.index)
+    }
 
     Scaffold(
         topBar = {
@@ -48,18 +55,23 @@ fun HomeScreen(
         }
     ) { padding ->
         LazyColumn(
+            state = lazyListState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            items(reminders) { reminder ->
-                ReminderItem(
-                    reminder = reminder,
-                    onClick = { onNavigateToEditReminder(reminder.id) },
-                    onToggleActive = { viewModel.toggleReminderActive(reminder) },
-                    onMoveUp = { viewModel.moveReminderUp(reminder) },
-                    onMoveDown = { viewModel.moveReminderDown(reminder) }
-                )
+            items(reminders, key = { it.id }) { reminder ->
+                ReorderableItem(reorderableState, key = reminder.id) { isDragging ->
+                    ReminderItem(
+                        reminder = reminder,
+                        isDragging = isDragging,
+                        onClick = { onNavigateToEditReminder(reminder.id) },
+                        onToggleActive = { viewModel.toggleReminderActive(reminder) },
+                        dragModifier = Modifier.draggableHandle(
+                            onDragStopped = { viewModel.onReminderDragStopped() }
+                        )
+                    )
+                }
             }
         }
     }
@@ -68,17 +80,18 @@ fun HomeScreen(
 @Composable
 fun ReminderItem(
     reminder: ReminderEntity,
+    isDragging: Boolean,
     onClick: () -> Unit,
     onToggleActive: (Boolean) -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit
+    dragModifier: Modifier = Modifier
 ) {
+    val elevation by animateDpAsState(if (isDragging) 8.dp else 4.dp)
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
     ) {
         Row(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -112,17 +125,14 @@ fun ReminderItem(
                 }
             }
             Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                IconButton(onClick = onMoveUp, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move Up")
+                IconButton(onClick = {}, modifier = dragModifier.size(24.dp)) {
+                    Icon(Icons.Default.DragHandle, contentDescription = "Drag to reorder")
                 }
                 Switch(
                     checked = reminder.isActive,
                     onCheckedChange = onToggleActive,
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
-                IconButton(onClick = onMoveDown, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move Down")
-                }
             }
         }
     }
