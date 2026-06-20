@@ -149,6 +149,9 @@ class ReminderViewModel(
         if (_title.value.isBlank()) return
 
         viewModelScope.launch {
+            val nextOrder = _allReminders.value.maxOfOrNull { it.displayOrder }?.plus(1) ?: 0
+            val currentOrder = _currentReminder.value?.displayOrder ?: nextOrder
+
             val entity = ReminderEntity(
                 id = _currentReminder.value?.id ?: 0,
                 title = _title.value,
@@ -159,7 +162,8 @@ class ReminderViewModel(
                 specificDate = _specificDate.value,
                 isRecurring = _isRecurring.value,
                 isActive = _isActive.value,
-                lastTriggeredTimestamp = _currentReminder.value?.lastTriggeredTimestamp
+                lastTriggeredTimestamp = _currentReminder.value?.lastTriggeredTimestamp,
+                displayOrder = currentOrder
             )
 
             val id = if (entity.id == 0L) {

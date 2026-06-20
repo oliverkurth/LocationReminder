@@ -24,6 +24,7 @@ import com.example.locationreminder.repository.AppRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
@@ -118,12 +119,17 @@ class LocationViewModel(private val repository: AppRepository) : ViewModel() {
         val name = _locationName.value.ifBlank { "Unnamed Location" }
         
         viewModelScope.launch {
+            val allLocationsList = repository.allLocations.first()
+            val nextOrder = allLocationsList.maxOfOrNull { it.displayOrder }?.plus(1) ?: 0
+            val currentOrder = _currentLocation.value?.displayOrder ?: nextOrder
+
             val entity = LocationEntity(
                 id = _currentLocation.value?.id ?: 0,
                 name = name,
                 latitude = point.latitude,
                 longitude = point.longitude,
-                radius = _radius.value
+                radius = _radius.value,
+                displayOrder = currentOrder
             )
             if (entity.id == 0L) {
                 repository.insertLocation(entity)
