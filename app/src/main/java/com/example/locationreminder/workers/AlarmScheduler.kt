@@ -80,6 +80,44 @@ object AlarmScheduler {
         }
     }
 
+    fun scheduleDeferAlarm(context: Context, reminderId: Long) {
+        val deferredTime = System.currentTimeMillis() + 10 * 60 * 1000
+        val delay = 10 * 60 * 1000L
+        
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            putExtra(ReminderWorker.KEY_REMINDER_ID, reminderId)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            reminderId.toInt(),
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        deferredTime,
+                        pendingIntent
+                    )
+                } else {
+                    scheduleWorkManagerFallback(context, reminderId, delay)
+                }
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    deferredTime,
+                    pendingIntent
+                )
+            }
+        } catch (e: SecurityException) {
+            scheduleWorkManagerFallback(context, reminderId, delay)
+        }
+    }
+
     private fun scheduleWorkManagerFallback(context: Context, reminderId: Long, delayMillis: Long) {
         val workData = Data.Builder()
             .putLong(ReminderWorker.KEY_REMINDER_ID, reminderId)

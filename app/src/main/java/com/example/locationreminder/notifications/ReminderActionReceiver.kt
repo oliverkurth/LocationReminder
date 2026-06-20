@@ -14,6 +14,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
+import com.example.locationreminder.workers.AlarmScheduler
+
 class ReminderActionReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -43,17 +45,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
                             )
                         )
 
-                        // Schedule work manager
-                        val workData = Data.Builder()
-                            .putLong(ReminderWorker.KEY_REMINDER_ID, reminderId)
-                            .build()
-
-                        val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
-                            .setInitialDelay(10, TimeUnit.MINUTES)
-                            .setInputData(workData)
-                            .build()
-
-                        WorkManager.getInstance(context).enqueue(workRequest)
+                        AlarmScheduler.scheduleDeferAlarm(context, reminderId)
                     }
                     ACTION_DISMISS -> {
                         // Just dismiss, reset deferred state if needed
