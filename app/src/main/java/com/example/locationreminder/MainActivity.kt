@@ -31,8 +31,24 @@ import com.example.locationreminder.ui.theme.LocationReminderTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.example.locationreminder.workers.AlarmSyncWorker
+import java.util.concurrent.TimeUnit
+import java.util.Calendar
 
 data class SharedLocationData(val lat: Double, val lon: Double, val name: String?)
+
+fun computeDelayUntilMidnight(): Long {
+    val calendar = Calendar.getInstance()
+    calendar.add(Calendar.DAY_OF_YEAR, 1)
+    calendar.set(Calendar.HOUR_OF_DAY, 0)
+    calendar.set(Calendar.MINUTE, 1)
+    calendar.set(Calendar.SECOND, 0)
+    calendar.set(Calendar.MILLISECOND, 0)
+    return calendar.timeInMillis - System.currentTimeMillis()
+}
 
 fun parseSharedText(text: String): SharedLocationData? {
     val qRegex = Regex("q=([0-9.-]+),([0-9.-]+)\\(([^)]+)\\)")
@@ -110,6 +126,7 @@ class MainActivity : ComponentActivity() {
                             if (bgPermissionState.allPermissionsGranted) {
                                 LaunchedEffect(Unit) {
                                     LocationTrackingService.startService(this@MainActivity)
+                                    scheduleAlarmSyncWorker()
                                 }
                                 AppNavigation(
                                     sharedLocationData = sharedLocationData,
@@ -124,6 +141,7 @@ class MainActivity : ComponentActivity() {
                         } else {
                             LaunchedEffect(Unit) {
                                 LocationTrackingService.startService(this@MainActivity)
+                                scheduleAlarmSyncWorker()
                             }
                             AppNavigation(
                                 sharedLocationData = sharedLocationData,
@@ -153,6 +171,17 @@ class MainActivity : ComponentActivity() {
                 sharedLocationData = parseSharedText(sharedText)
             }
         }
+    }
+
+    private fun scheduleAlarmSyncWorker() {
+        val dailySync = PeriodicWorkRequestBuilder<AlarmSyncWorker>(1, TimeUnit.DAYS)
+            .setInitialDelay(computeDelayUntilMidnight(), TimeUnit.MILLISECONDS)
+            .build()
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "alarm_sync",
+            ExistingPeriodicWorkPolicy.KEEP,
+            dailySync
+        )
     }
 }
 

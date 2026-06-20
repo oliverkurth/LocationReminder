@@ -11,6 +11,7 @@ import com.example.locationreminder.data.AppDatabase
 import com.example.locationreminder.notifications.NotificationHelper
 import com.example.locationreminder.repository.AppRepository
 import com.google.android.gms.location.LocationServices
+import com.example.locationreminder.workers.AlarmScheduler
 import kotlinx.coroutines.tasks.await
 
 class ReminderWorker(
@@ -86,82 +87,9 @@ class ReminderWorker(
 
         // If it's recurring, schedule the next one for tomorrow (or next valid day)
         if (reminder.isRecurring && reminder.timeOfDay != null) {
-            val parts = reminder.timeOfDay.split(":")
-            if (parts.size == 2) {
-                val hour = parts[0].toIntOrNull() ?: 0
-                val minute = parts[1].toIntOrNull() ?: 0
-                val calendar = java.util.Calendar.getInstance().apply {
-                    set(java.util.Calendar.HOUR_OF_DAY, hour)
-                    set(java.util.Calendar.MINUTE, minute)
-                    set(java.util.Calendar.SECOND, 0)
-                    set(java.util.Calendar.MILLISECOND, 0)
-                    add(java.util.Calendar.DAY_OF_YEAR, 1) // Tomorrow
-                }
-
-                if (reminder.recurringDays != null && reminder.recurringDays.isNotEmpty()) {
-                    while (!reminder.recurringDays.contains(calendar.get(java.util.Calendar.DAY_OF_WEEK))) {
-                        calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
-                    }
-                }
-
-                val delay = calendar.timeInMillis - System.currentTimeMillis()
-                if (delay > 0) {
-                    val alarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-                    val intent = android.content.Intent(applicationContext, com.example.locationreminder.workers.AlarmReceiver::class.java).apply {
-                        putExtra(KEY_REMINDER_ID, reminderId)
-                    }
-                    val pendingIntent = android.app.PendingIntent.getBroadcast(
-                        applicationContext,
-                        reminderId.toInt(),
-                        intent,
-                        android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
-                    )
-
-                    try {
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                            if (alarmManager.canScheduleExactAlarms()) {
-                                alarmManager.setExactAndAllowWhileIdle(
-                                    android.app.AlarmManager.RTC_WAKEUP,
-                                    calendar.timeInMillis,
-                                    pendingIntent
-                                )
-                            } else {
-                                // Fallback
-                                val workData = androidx.work.Data.Builder()
-                                    .putLong(KEY_REMINDER_ID, reminderId)
-                                    .build()
-
-                                val workRequest = androidx.work.OneTimeWorkRequestBuilder<ReminderWorker>()
-                                    .setInitialDelay(delay, java.util.concurrent.TimeUnit.MILLISECONDS)
-                                    .setInputData(workData)
-                                    .addTag("reminder_$reminderId")
-                                    .build()
-
-                                androidx.work.WorkManager.getInstance(applicationContext).enqueue(workRequest)
-                            }
-                        } else {
-                            alarmManager.setExactAndAllowWhileIdle(
-                                android.app.AlarmManager.RTC_WAKEUP,
-                                calendar.timeInMillis,
-                                pendingIntent
-                            )
-                        }
-                    } catch (e: SecurityException) {
-                        // Fallback
-                        val workData = androidx.work.Data.Builder()
-                            .putLong(KEY_REMINDER_ID, reminderId)
-                            .build()
-
-                        val workRequest = androidx.work.OneTimeWorkRequestBuilder<ReminderWorker>()
-                            .setInitialDelay(delay, java.util.concurrent.TimeUnit.MILLISECONDS)
-                            .setInputData(workData)
-                            .addTag("reminder_$reminderId")
-                            .build()
-
-                        androidx.work.WorkManager.getInstance(applicationContext).enqueue(workRequest)
-                    }
-                }
-            }
+            // We need to schedule the next occurrence. AlarmScheduler.scheduleAlarm will schedule it for the next valid day
+            // because the current time has already passed the alarm time for today.
+            AlarmScheduler.scheduleAlarm(applicationContext, reminder)
         }
 
         return Result.success()

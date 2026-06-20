@@ -16,6 +16,7 @@ import com.example.locationreminder.data.LocationEntity
 import com.example.locationreminder.data.ReminderEntity
 import com.example.locationreminder.repository.AppRepository
 import com.example.locationreminder.workers.ReminderWorker
+import com.example.locationreminder.workers.AlarmScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -225,110 +226,12 @@ class ReminderViewModel(
     }
 
     private fun cancelAlarm(reminderId: Long) {
-        val intent = Intent(context, com.example.locationreminder.workers.AlarmReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            reminderId.toInt(),
-            intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_NO_CREATE
-        )
-        if (pendingIntent != null) {
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            alarmManager.cancel(pendingIntent)
-            pendingIntent.cancel()
-        }
+        AlarmScheduler.cancelAlarm(context, reminderId)
     }
 
     private fun scheduleWorkManager(reminderId: Long, reminder: ReminderEntity) {
-        workManager.cancelAllWorkByTag("reminder_$reminderId")
-        cancelAlarm(reminderId)
-
-        if (reminder.timeOfDay != null) {
-            val parts = reminder.timeOfDay.split(":")
-            if (parts.size == 2) {
-                val hour = parts[0].toInt()
-                val minute = parts[1].toInt()
-
-                val calendar = Calendar.getInstance().apply {
-                    if (reminder.specificDate != null) {
-                        timeInMillis = reminder.specificDate
-                    }
-                    set(Calendar.HOUR_OF_DAY, hour)
-                    set(Calendar.MINUTE, minute)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-
-                if (reminder.specificDate == null && calendar.timeInMillis <= System.currentTimeMillis()) {
-                    calendar.add(Calendar.DAY_OF_YEAR, 1)
-                }
-
-                // If it's recurring and we have selected days, find the next valid day
-                if (reminder.isRecurring && reminder.recurringDays != null && reminder.recurringDays.isNotEmpty()) {
-                    while (!reminder.recurringDays.contains(calendar.get(Calendar.DAY_OF_WEEK))) {
-                        calendar.add(Calendar.DAY_OF_YEAR, 1)
-                    }
-                }
-
-                val delay = calendar.timeInMillis - System.currentTimeMillis()
-                if (delay > 0) {
-                    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-                    val intent = Intent(context, com.example.locationreminder.workers.AlarmReceiver::class.java).apply {
-                        putExtra(ReminderWorker.KEY_REMINDER_ID, reminderId)
-                    }
-                    val pendingIntent = PendingIntent.getBroadcast(
-                        context,
-                        reminderId.toInt(),
-                        intent,
-                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                    )
-
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            if (alarmManager.canScheduleExactAlarms()) {
-                                alarmManager.setExactAndAllowWhileIdle(
-                                    AlarmManager.RTC_WAKEUP,
-                                    calendar.timeInMillis,
-                                    pendingIntent
-                                )
-                            } else {
-                                // Fallback to WorkManager if permission is not granted
-                                val workData = Data.Builder()
-                                    .putLong(ReminderWorker.KEY_REMINDER_ID, reminderId)
-                                    .build()
-
-                                val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
-                                    .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-                                    .setInputData(workData)
-                                    .addTag("reminder_$reminderId")
-                                    .build()
-
-                                workManager.enqueue(workRequest)
-                            }
-                        } else {
-                            alarmManager.setExactAndAllowWhileIdle(
-                                AlarmManager.RTC_WAKEUP,
-                                calendar.timeInMillis,
-                                pendingIntent
-                            )
-                        }
-                    } catch (e: SecurityException) {
-                        // Fallback to WorkManager
-                        val workData = Data.Builder()
-                            .putLong(ReminderWorker.KEY_REMINDER_ID, reminderId)
-                            .build()
-
-                        val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
-                            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-                            .setInputData(workData)
-                            .addTag("reminder_$reminderId")
-                            .build()
-
-                        workManager.enqueue(workRequest)
-                    }
-                }
-            }
-        }
+        AlarmScheduler.cancelAlarm(context, reminderId)
+        AlarmScheduler.scheduleAlarm(context, reminder)
     }
 }
 
