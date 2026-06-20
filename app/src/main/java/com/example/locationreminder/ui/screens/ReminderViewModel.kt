@@ -183,6 +183,7 @@ class ReminderViewModel(
             repository.deleteReminder(reminder)
             cancelAlarm(reminder.id)
             workManager.cancelAllWorkByTag("reminder_${reminder.id}")
+            com.example.locationreminder.notifications.NotificationHelper(context).cancelNotification(reminder.id)
         }
     }
 
