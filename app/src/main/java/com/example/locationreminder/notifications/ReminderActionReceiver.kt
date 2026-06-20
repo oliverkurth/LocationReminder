@@ -20,6 +20,8 @@ class ReminderActionReceiver : BroadcastReceiver() {
         val reminderId = intent.getLongExtra(EXTRA_REMINDER_ID, -1)
         if (reminderId == -1L) return
 
+        val pendingResult = goAsync()
+
         val notificationHelper = NotificationHelper(context)
         notificationHelper.cancelNotification(reminderId)
 
@@ -27,49 +29,53 @@ class ReminderActionReceiver : BroadcastReceiver() {
         val repository = AppRepository(database.locationDao(), database.reminderDao())
 
         CoroutineScope(Dispatchers.IO).launch {
-            val reminder = repository.getReminderById(reminderId) ?: return@launch
+            try {
+                val reminder = repository.getReminderById(reminderId) ?: return@launch
 
-            when (intent.action) {
-                ACTION_DEFER -> {
-                    // Defer for 10 minutes
-                    val deferredTime = System.currentTimeMillis() + 10 * 60 * 1000
-                    repository.updateReminder(
-                        reminder.copy(
-                            isDeferred = true,
-                            deferredUntil = deferredTime
+                when (intent.action) {
+                    ACTION_DEFER -> {
+                        // Defer for 10 minutes
+                        val deferredTime = System.currentTimeMillis() + 10 * 60 * 1000
+                        repository.updateReminder(
+                            reminder.copy(
+                                isDeferred = true,
+                                deferredUntil = deferredTime
+                            )
                         )
-                    )
 
-                    // Schedule work manager
-                    val workData = Data.Builder()
-                        .putLong(ReminderWorker.KEY_REMINDER_ID, reminderId)
-                        .build()
+                        // Schedule work manager
+                        val workData = Data.Builder()
+                            .putLong(ReminderWorker.KEY_REMINDER_ID, reminderId)
+                            .build()
 
-                    val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
-                        .setInitialDelay(10, TimeUnit.MINUTES)
-                        .setInputData(workData)
-                        .build()
+                        val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
+                            .setInitialDelay(10, TimeUnit.MINUTES)
+                            .setInputData(workData)
+                            .build()
 
-                    WorkManager.getInstance(context).enqueue(workRequest)
-                }
-                ACTION_DISMISS -> {
-                    // Just dismiss, reset deferred state if needed
-                    val updatedReminder = if (!reminder.isRecurring) {
-                        reminder.copy(isDeferred = false, deferredUntil = null, isActive = false)
-                    } else {
-                        reminder.copy(isDeferred = false, deferredUntil = null)
+                        WorkManager.getInstance(context).enqueue(workRequest)
                     }
-                    repository.updateReminder(updatedReminder)
-                }
-                ACTION_CLICK -> {
-                    if (!reminder.isRecurring) {
-                        repository.updateReminder(reminder.copy(isDeferred = false, deferredUntil = null, isActive = false))
+                    ACTION_DISMISS -> {
+                        // Just dismiss, reset deferred state if needed
+                        val updatedReminder = if (!reminder.isRecurring) {
+                            reminder.copy(isDeferred = false, deferredUntil = null, isActive = false)
+                        } else {
+                            reminder.copy(isDeferred = false, deferredUntil = null)
+                        }
+                        repository.updateReminder(updatedReminder)
                     }
-                    val mainIntent = Intent(context, com.example.locationreminder.MainActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    ACTION_CLICK -> {
+                        if (!reminder.isRecurring) {
+                            repository.updateReminder(reminder.copy(isDeferred = false, deferredUntil = null, isActive = false))
+                        }
+                        val mainIntent = Intent(context, com.example.locationreminder.MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        }
+                        context.startActivity(mainIntent)
                     }
-                    context.startActivity(mainIntent)
                 }
+            } finally {
+                pendingResult.finish()
             }
         }
     }
