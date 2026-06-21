@@ -56,15 +56,12 @@ class ReminderActionReceiver : BroadcastReceiver() {
                         }
                         repository.updateReminder(updatedReminder)
                     }
-                    ACTION_CLICK -> {
-                        if (!reminder.isRecurring) {
-                            repository.updateReminder(reminder.copy(isDeferred = false, deferredUntil = null, isActive = false))
-                        }
-                        val mainIntent = Intent(context, com.example.locationreminder.MainActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        }
-                        context.startActivity(mainIntent)
+                ACTION_CLICK -> {
+                    val mainIntent = Intent(context, com.example.locationreminder.MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     }
+                    context.startActivity(mainIntent)
+                }
                 }
             } finally {
                 pendingResult.finish()

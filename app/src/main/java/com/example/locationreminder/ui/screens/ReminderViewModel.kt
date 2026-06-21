@@ -66,15 +66,22 @@ class ReminderViewModel(
     private val _allReminders = MutableStateFlow<List<ReminderEntity>>(emptyList())
     val allReminders: StateFlow<List<ReminderEntity>> = _allReminders.asStateFlow()
 
+    private var isDraggingReminders = false
+    private var isDraggingLocations = false
+
     init {
         viewModelScope.launch {
             repository.allLocations.collect {
-                _allLocations.value = it
+                if (!isDraggingLocations) {
+                    _allLocations.value = it
+                }
             }
         }
         viewModelScope.launch {
             repository.allReminders.collect {
-                _allReminders.value = it
+                if (!isDraggingReminders) {
+                    _allReminders.value = it
+                }
             }
         }
     }
@@ -187,6 +194,10 @@ class ReminderViewModel(
         }
     }
 
+    fun onReminderDragStarted() {
+        isDraggingReminders = true
+    }
+
     fun onReminderMoved(fromIndex: Int, toIndex: Int) {
         val currentList = _allReminders.value.toMutableList()
         val item = currentList.removeAt(fromIndex)
@@ -195,6 +206,7 @@ class ReminderViewModel(
     }
 
     fun onReminderDragStopped() {
+        isDraggingReminders = false
         val currentList = _allReminders.value.mapIndexed { index, item -> 
             item.copy(displayOrder = index) 
         }
@@ -214,6 +226,10 @@ class ReminderViewModel(
         }
     }
 
+    fun onLocationDragStarted() {
+        isDraggingLocations = true
+    }
+
     fun onLocationMoved(fromIndex: Int, toIndex: Int) {
         val currentList = _allLocations.value.toMutableList()
         val item = currentList.removeAt(fromIndex)
@@ -222,6 +238,7 @@ class ReminderViewModel(
     }
 
     fun onLocationDragStopped() {
+        isDraggingLocations = false
         val currentList = _allLocations.value.mapIndexed { index, item -> 
             item.copy(displayOrder = index) 
         }

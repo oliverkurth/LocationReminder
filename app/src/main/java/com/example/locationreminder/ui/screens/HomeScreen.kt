@@ -68,6 +68,7 @@ fun HomeScreen(
                         onClick = { onNavigateToEditReminder(reminder.id) },
                         onToggleActive = { viewModel.toggleReminderActive(reminder) },
                         dragModifier = Modifier.draggableHandle(
+                            onDragStarted = { viewModel.onReminderDragStarted() },
                             onDragStopped = { viewModel.onReminderDragStopped() }
                         )
                     )

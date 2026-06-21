@@ -66,6 +66,7 @@ fun LocationsListScreen(
                         isDragging = isDragging,
                         onClick = { onNavigateToEditLocation(location.id) },
                         dragModifier = Modifier.draggableHandle(
+                            onDragStarted = { viewModel.onLocationDragStarted() },
                             onDragStopped = { viewModel.onLocationDragStopped() }
                         )
                     )
