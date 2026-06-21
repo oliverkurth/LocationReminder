@@ -32,12 +32,14 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun showReminderNotification(reminder: ReminderEntity) {
+        val baseRequestCode = (reminder.id and 0x7FFFFFFL).toInt() * 10
+
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
-            reminder.id.toInt(),
+            baseRequestCode,
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -48,7 +50,7 @@ class NotificationHelper(private val context: Context) {
         }
         val deferPendingIntent = PendingIntent.getBroadcast(
             context,
-            reminder.id.toInt() + 1000,
+            baseRequestCode + 1,
             deferIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -59,7 +61,7 @@ class NotificationHelper(private val context: Context) {
         }
         val dismissPendingIntent = PendingIntent.getBroadcast(
             context,
-            reminder.id.toInt() + 2000,
+            baseRequestCode + 2,
             dismissIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -70,7 +72,7 @@ class NotificationHelper(private val context: Context) {
         }
         val clickPendingIntent = PendingIntent.getBroadcast(
             context,
-            reminder.id.toInt() + 3000,
+            baseRequestCode + 3,
             clickIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
